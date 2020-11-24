@@ -14,6 +14,7 @@ ProgressAndSpeedDialog::ProgressAndSpeedDialog(QWidget *parent) :
 
     // изменяем надпись на кнопке
     ui->resultBBX->button( QDialogButtonBox::Cancel )->setText("Отмена");
+
     // убираем кнопку "help"
     setWindowFlag( Qt::WindowContextHelpButtonHint, false );
 
@@ -39,7 +40,7 @@ void ProgressAndSpeedDialog::on_resultBBX_rejected()
 void ProgressAndSpeedDialog::rejection()
 {
     if( !rejectFlag ) {
-        rejectFlag = true; // теперь сигнал будет отправлен лишь раз
+        rejectFlag = true;      // теперь сигнал будет отправлен лишь раз
 
         emit abortProcess();    // отправляем сигнал о досрочном завершении
     }
@@ -50,6 +51,7 @@ void ProgressAndSpeedDialog::hideEvent(QHideEvent *event)
     // hide произойдет при любом способе закрытия диалога:
     //  - нажатии на кнопку Esc
     //  - нажатии на "крестик"
+    //  - удалении объекта класса (снаружи)
     rejection();                // выполняем отмену
     QDialog::hideEvent(event);  // выполняем действия по умолчанию для события hide
 }

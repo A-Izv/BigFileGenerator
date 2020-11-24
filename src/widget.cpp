@@ -24,6 +24,7 @@ Widget::Widget(QWidget *parent) :
  // настройки главного окна (this-> для наглядности)
     // фиксируем размер окна по вертикали
     this->setMaximumHeight( this->layout()->minimumSize().height() );
+
  // инициализация генератора случайных чисел
     qsrand( QTime::currentTime().msecsSinceStartOfDay() );
 
@@ -252,9 +253,9 @@ void Widget::on_startPBN_clicked()
                 pasd->show();
 
                 // запускаем генерацию
-                emit generateFile( file,                                            // файл
-                                   fileSizeMb,                                      // размер
-                                   ui->speedCBX->isChecked() ? 0 : writeSpeedMb_s );// скорость
+                emit generateFile( file,                                                 // файл
+                                   fileSizeMb,                                           // размер
+                                   ui->speedCBX->isChecked() ? 1<<31 : writeSpeedMb_s ); // скорость, Мб/с
             }
         }
         catch(...) {

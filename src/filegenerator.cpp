@@ -72,7 +72,7 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, int speedMb )
             while( samplesToWrite &&    // пока не запишем все отсчеты
                   !abortFlag )          // или пока не будет выставлен флаг
             {
-                // определяем размер порции
+                // определяем размер порции в зависимости от заданной скорости
                 portionSizeSmpl = qMin<qint64>( MAX_SIZE, samplesToWrite );
                 // формируем ПСП
                 CHK( ippsRandGauss_32f( buffer, portionSizeSmpl, randGaussState ) );
