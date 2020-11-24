@@ -21,10 +21,9 @@ Widget::Widget(QWidget *parent) :
     generator(nullptr)
 {
     ui->setupUi(this);
- // настройки главного окна
-    // отключаем возможность максимизации
-    this->setWindowFlag( Qt::WindowMaximizeButtonHint, false );
-
+ // настройки главного окна (this-> для наглядности)
+    // фиксируем размер окна по вертикали
+    this->setMaximumHeight( this->layout()->minimumSize().height() );
  // инициализация генератора случайных чисел
     qsrand( QTime::currentTime().msecsSinceStartOfDay() );
 

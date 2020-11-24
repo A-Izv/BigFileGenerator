@@ -24,12 +24,12 @@ public slots:
 private slots:
     void                        on_resultBBX_rejected();
 
-private:
+protected:
     Ui::ProgressAndSpeedDialog  *ui;
     bool                         rejectFlag;
 
-protected:
-    void                        closeEvent(QCloseEvent *event);
+    void                        rejection();
+
     void                        hideEvent(QHideEvent *event);
 };
 //------------------------------------------------------------------------------

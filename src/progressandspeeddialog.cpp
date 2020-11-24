@@ -8,16 +8,20 @@ ProgressAndSpeedDialog::ProgressAndSpeedDialog(QWidget *parent) :
     ui(new Ui::ProgressAndSpeedDialog)
 {
     ui->setupUi(this);
+
+    // фиксируем размер окна по вертикали
+    this->setMaximumHeight( this->layout()->minimumSize().height() );
+
+    // изменяем надпись на кнопке
     ui->resultBBX->button( QDialogButtonBox::Cancel )->setText("Отмена");
+    // убираем кнопку "help"
     setWindowFlag( Qt::WindowContextHelpButtonHint, false );
 
-
-    rejectFlag = false;
+    rejectFlag = false; // сброс флага, предотвращающий многокртаную отправку сигнала
 }
 //------------------------------------------------------------------------------
 ProgressAndSpeedDialog::~ProgressAndSpeedDialog()
 {
-    qDebug() << "ProgressAndSpeedDialog:" << "destructor";
     delete ui;
 }
 //------------------------------------------------------------------------------
@@ -29,25 +33,24 @@ void ProgressAndSpeedDialog::setProgress(int progress, double speedMb)
 //------------------------------------------------------------------------------
 void ProgressAndSpeedDialog::on_resultBBX_rejected()
 {
-    if( !rejectFlag ) {
-        rejectFlag = true;
-        qDebug() << "ProgressAndSpeedDialog:" << "reject";
-
-        emit abortProcess();
-        deleteLater();
-    }
+    rejection(); // при нажатии на кнопку - выполняем отмену
 }
 //------------------------------------------------------------------------------
-void ProgressAndSpeedDialog::closeEvent(QCloseEvent *event)
+void ProgressAndSpeedDialog::rejection()
 {
-    qDebug() << "ProgressAndSpeedDialog:" << "closeEvent";
-    QDialog::closeEvent(event);
+    if( !rejectFlag ) {
+        rejectFlag = true; // теперь сигнал будет отправлен лишь раз
+
+        emit abortProcess();    // отправляем сигнал о досрочном завершении
+    }
 }
 //------------------------------------------------------------------------------
 void ProgressAndSpeedDialog::hideEvent(QHideEvent *event)
 {
-    qDebug() << "ProgressAndSpeedDialog:" << "hideEvent";
-    on_resultBBX_rejected();
-    QDialog::hideEvent(event);
+    // hide произойдет при любом способе закрытия диалога:
+    //  - нажатии на кнопку Esc
+    //  - нажатии на "крестик"
+    rejection();                // выполняем отмену
+    QDialog::hideEvent(event);  // выполняем действия по умолчанию для события hide
 }
 //------------------------------------------------------------------------------
