@@ -24,6 +24,7 @@ Widget::Widget(QWidget *parent) :
  // настройки главного окна (this-> для наглядности)
     // фиксируем размер окна по вертикали
     this->setMaximumHeight( this->layout()->minimumSize().height() );
+
  // инициализация генератора случайных чисел
     qsrand( QTime::currentTime().msecsSinceStartOfDay() );
 
