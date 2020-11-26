@@ -27,25 +27,25 @@ public slots:
     void            generationFinished( FileGenerator::FinishReason r );
 
 private slots:
-    void on_fileNameCBX_toggled(bool checked);
-    void on_fileNameLED_editingFinished();
-    void on_sizeHSL_valueChanged(int value);
-    void on_speedHSL_valueChanged(int value);
-    void on_dirPBN_clicked();
-    void on_startPBN_clicked();
+    void            on_fileNameCBX_toggled(bool checked);
+    void            on_fileNameLED_editingFinished();
+    void            on_sizeHSL_valueChanged(int value);
+    void            on_speedHSL_valueChanged(int value);
+    void            on_dirPBN_clicked();
+    void            on_startPBN_clicked();
 
 protected:
     Ui::Widget      *ui;        // QWidget interface
     QSettings       settings;
 
-    QString         fileName;
-    QString         pathName;
-    qint64          fileSizeMb;
-    qint64          writeSpeedMb_s;
+    QString         fileName;       // имя файла
+    QString         pathName;       // путь до файла
+    qint64          fileSizeMb;     // сколько нужно мегабайт
+    qint64          writeSpeedMb_s; // требуемая максимальная скорость
 
-    QFile           *file;
-    QThread         *thread;
-    FileGenerator   *generator;
+    QFile           *file;          // файл
+    QThread         *thread;        // поток, в котором выполняется генератор
+    FileGenerator   *generator;     // генератор файла
 
     void            closeEvent(QCloseEvent *event);
     QString         getTmpName();

@@ -16,17 +16,17 @@ public:
                                ~ProgressAndSpeedDialog();
 
 signals:
-    void                        abortProcess();
+    void                        abortProcess(); // диалог может послать сигнал о досрочном завершении
 
 public slots:
-    void                        setProgress( int progress, double speedMb );
+    void                        setProgress( int progress ); // отображаемое значение - снаружи
 
 private slots:
     void                        on_resultBBX_rejected();
 
 protected:
     Ui::ProgressAndSpeedDialog  *ui;
-    bool                         rejectFlag;
+    bool                        rejectFlag; // флаг для того, чтобы сигнал отправлялся лишь раз
 
     void                        rejection();
 

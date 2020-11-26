@@ -6,8 +6,7 @@
 #include <cmath>
 #include <QThread>
 //------------------------------------------------------------------------------
-const int FileGenerator::MAX_SIZE = 64*1024*1024/sizeof(float);
-const int FileGenerator::MIN_SIZE = 1024/sizeof(float);
+const int FileGenerator::MAX_SIZE_SMPL = 64*1024*1024/sizeof(float);
 //------------------------------------------------------------------------------
 FileGenerator::FileGenerator(QObject *parent) :
     QObject( parent ),
@@ -21,7 +20,7 @@ FileGenerator::FileGenerator(QObject *parent) :
     qRegisterMetaType<FinishReason>( "FinishReason" );
 
  // выделение памяти
-    buffer = ippsMalloc_32f( MAX_SIZE );
+    buffer = ippsMalloc_32f( MAX_SIZE_SMPL );
 
  // подготовка генератора случайных чисел
     unsigned    seed = unsigned(   qrand() | (qrand() << 16)   );
@@ -35,7 +34,7 @@ FileGenerator::FileGenerator(QObject *parent) :
               seed ) );                                                 // начальное состояние генератора
  // получаем частоту ЦПУ в герцах
     CHK( ippGetCpuFreqMhz(&tmpI) );
-    cpuFreq = tmpI;// * 1000. * 1000.; // сколько милионов тактов в секунду
+    cpuFreq = tmpI; // сколько милионов тактов в секунду
 }
 //------------------------------------------------------------------------------
 FileGenerator::~FileGenerator()
@@ -49,59 +48,61 @@ void FileGenerator::abortGeneration()
     abortFlag = true;
 }
 //------------------------------------------------------------------------------
-void FileGenerator::generateFile(QFile *file, int sizeMb, int speedMb )
+void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb )
 {
     FinishReason result = Error;
 
     abortFlag = false; // сбрасываем флаг прекращения
     if( file && file->isOpen() ) {
         try {
-            qint64  bytesToWrite   = sizeMb*1024*1024ll; // если не будет константы LL то результат будет int
+            qint64  bytesToWrite   = 1024LL*1024*sizeMb; // если не будет константы LL то результат будет int
             qint64  samplesToWrite = bytesToWrite / sizeof(Ipp32f);
             qint64  tmp64;
-            quint64 bgnTime;
+            qint64  curTime, bgnTime, oldTime;
             qint64  bytesWritten = 0;
-            qint64  speedBytePerMTact = (1024.*1024.*speedMb)/cpuFreq;
+            qint64  speedBytePerMTact = (1024LL*1024*speedMb)/cpuFreq; // LL нужна!
             qint64  portionSizeSmpl;
-            double  speed;
 
-            // настраиваем файл
+         // настраиваем файл
             file->resize( 0 );  // изменяем размер файла
             file->seek( 0 );    // позиционируемся на начале файла
          // запоминаем начальную метку времени
-            bgnTime = ippGetCpuClocks();
+            bgnTime = oldTime = ippGetCpuClocks();
          // цикл записи
             while( samplesToWrite &&    // пока не запишем все отсчеты
                   !abortFlag )          // или пока не будет выставлен флаг
             {
                 // сколько байт следовало бы записать на текущий момент,
                 // чтобы достичь требуемой скорости записи
-                tmp64  = ippGetCpuClocks() - bgnTime;       // число тактов, прошедшее с начал записи
-                tmp64 /= 1000*1000;                         // сколько милионов тактов прошло
+                curTime = ippGetCpuClocks();
+                tmp64   = curTime - bgnTime;                // число тактов, прошедшее с начал записи
+                tmp64  /= 1000*1000;                        // сколько милионов тактов прошло
                 portionSizeSmpl  = tmp64*speedBytePerMTact; // число байт, которое должно быть записано
-                portionSizeSmpl -= bytesWritten;            // вычитаем записанные байты - получаем сколько нужно записать
+                portionSizeSmpl -= bytesWritten;            // вычитаем записанные байты - получаем сколько еще нужно записать
                 portionSizeSmpl /= sizeof(Ipp32f);          // переводим в число отсчетов
                 // корректируем значение
-                portionSizeSmpl = qMin<qint64>( portionSizeSmpl, MAX_SIZE ); // не больше максимального размера
+                portionSizeSmpl = qMin<qint64>( portionSizeSmpl, MAX_SIZE_SMPL  ); // не больше максимального размера
                 portionSizeSmpl = qMin(         portionSizeSmpl, samplesToWrite ); // не больше требуемого числа байт
-                // совсем маленькие порции записывать не будем (если это не остаток)
-                if( portionSizeSmpl < MIN_SIZE &&
-                    portionSizeSmpl != samplesToWrite )
+
+                // вместо записи данныъ будем спать если:
+                if( portionSizeSmpl < MAX_SIZE_SMPL     &&  // порция меньше максимальной
+                    portionSizeSmpl != samplesToWrite   &&  // это не остаток (последняя порция данных)
+                   (curTime-oldTime)/1000000 < cpuFreq )    // последняя запись была меньше чем секунду назад
                 {
-                 // отдаем остатки кванта другим потокам...
-                    QThread::yieldCurrentThread();
+                 // спим 10 милисекунд
+                    QThread::msleep(10);
                 } else {
+                    oldTime = curTime; // запоминаем время последней записи
+
                     // формируем ПСП
                     CHK( ippsRandGauss_32f( buffer, portionSizeSmpl, randGaussState ) );
                     // записываем ПСП в файл
                     tmp64 = file->write( (char*)buffer, portionSizeSmpl*sizeof(Ipp32f) );
                     bytesWritten   += tmp64;
                     samplesToWrite -= tmp64 / sizeof(Ipp32f); // !уменьшаем объем, который надо записать
-                    // расчитываем среднюю скорость
-                    tmp64 = ippGetCpuClocks() - bgnTime;            // число тактов, прошедшее с начала
-                    speed = bytesWritten / (tmp64/(cpuFreq));       // скорость, мегабайт в секунду (т.к. cpuFreq в МГц)
-                    // отправляем сигнал с информацией о прогрессе и скорости
-                    emit currentProgress( 100LL*bytesWritten/bytesToWrite, speed );
+
+                    // отправляем сигнал с информацией о прогрессе
+                    emit currentProgress( 100*bytesWritten/bytesToWrite );
                 }
             }
             result = abortFlag ? HasBeenAborted : FileReady; // если записали все, что нужно - отправляем FileReady
@@ -110,7 +111,6 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, int speedMb )
             result = Error;
         }
     }
-
     emit generationFinished( result );
 }
 //------------------------------------------------------------------------------

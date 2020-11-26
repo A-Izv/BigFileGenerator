@@ -26,10 +26,9 @@ ProgressAndSpeedDialog::~ProgressAndSpeedDialog()
     delete ui;
 }
 //------------------------------------------------------------------------------
-void ProgressAndSpeedDialog::setProgress(int progress, double speedMb)
+void ProgressAndSpeedDialog::setProgress(int progress )
 {
     ui->PBR->setValue( progress );
-    ui->speedLBL->setText( QString::number(speedMb,'f',3) );
 }
 //------------------------------------------------------------------------------
 void ProgressAndSpeedDialog::on_resultBBX_rejected()
