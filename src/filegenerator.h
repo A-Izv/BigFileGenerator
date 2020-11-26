@@ -19,20 +19,19 @@ public:
 
 signals:
     void                    generationFinished( FinishReason r );
-    void                    currentProgress( int p, double curSpeed );
+    void                    currentProgress( int p );
 
 public slots:
-    void                    generateFile(QFile *file, int sizeMb, int speedMb );
+    void                    generateFile(QFile *file, int sizeMb, short speedMb );
 
 private:
-    static const int        MAX_SIZE;
-    static const int        MIN_SIZE;
+    static const int        MAX_SIZE_SMPL;
 
 private:
-    Ipp32f                  *buffer;
-    IppsRandGaussState_32f  *randGaussState;
-    double                  cpuFreq;
-    bool                    abortFlag;
+    Ipp32f                  *buffer;        // буфер для формирования ПСП
+    IppsRandGaussState_32f  *randGaussState;// состояние гаусовского генератора случайных чисел
+    qint64                  cpuFreq;        // частота процессора, МГц
+    bool                    abortFlag;      // флаг (принудительного) завершения генерации
 
 };
 //------------------------------------------------------------------------------

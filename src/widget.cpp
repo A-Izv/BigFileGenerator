@@ -9,7 +9,6 @@
 #include <QMessageBox>
 #include <QFileDialog>
 //------------------------------------------------------------------------------
-#include "appGlobal.h"
 #include "progressandspeeddialog.h"
 //------------------------------------------------------------------------------
 Widget::Widget(QWidget *parent) :
@@ -80,13 +79,13 @@ Widget::~Widget()
     settings.setValue( "writeSpeedMb_s",    writeSpeedMb_s );
 
  // удаляем объекты
-    thread->quit();
-    thread->wait();
-    delete  thread;     thread      = nullptr;
+    thread->quit(); // просим поток завершиться
+    thread->wait(); // ожидаем завершения потока
+    delete  thread;     thread      = nullptr;  // корректно удаляется лишь завершенный поток
 
-    delete generator;   generator   = nullptr;
+    delete generator;   generator   = nullptr;  // теперь можно удалить и генератор
 
-    delete file;        file        = nullptr;
+    delete file;        file        = nullptr;  // и генерируемый файл
 
     delete ui;
 }
@@ -94,7 +93,6 @@ Widget::~Widget()
 void Widget::closeEvent(QCloseEvent *event)
 {// главное окно приложения закрывают
     generator->abortGeneration();
-    Global::TerminateFlag = true; // выставляем глобальный флаг - чтобы завершить текущую обработку
     QWidget::closeEvent(event); // обрабатываем событие по умолчанию
 }
 //------------------------------------------------------------------------------
@@ -165,50 +163,63 @@ QString Widget::getFullPathName()
     result = pathName + QDir::separator() + fileName;
     result = QDir::fromNativeSeparators(result);
 
+    QFileInfo fi(result);
+
  // проверяем, существует ли файл
-    while( flag && QFile::exists(result) ) {
-     // файл существует, создаем диалог с кастомными кнопками
-        QMessageBox *box = new QMessageBox( this );
+    while( flag && fi.exists(result) ) {
+        if( fi.isFile() ) {
+         // файл существует, создаем диалог с кастомными кнопками
+            QMessageBox *box = new QMessageBox( this );
 
-        box->setIcon( QMessageBox::Warning );
-        box->setWindowTitle( "Файл уже существует" );
-        box->addButton( QMessageBox::Ok     )->setText( "Перезаписать" );
-        box->addButton( QMessageBox::Cancel )->setText( "Отменить"     );
-        if( ui->fileNameCBX->isChecked() ) {
-         // если имя случайное - появляется возможность создать файл с другим случайным именем
-            box->addButton( QMessageBox::Reset )->setText( "С новым именем" );
-            box->setText( "Файл уже существует.\n"
-                          "Можно отменить обработку, "
-                          "перезаписать файл или "
-                          "сформировать файл с новым именем." );
+            box->setIcon( QMessageBox::Warning );
+            box->setWindowTitle( "Файл уже существует" );
+            box->addButton( QMessageBox::Ok     )->setText( "Перезаписать" );
+            box->addButton( QMessageBox::Cancel )->setText( "Отменить"     );
+            if( ui->fileNameCBX->isChecked() ) {
+             // если имя случайное - появляется возможность создать файл с другим случайным именем
+                box->addButton( QMessageBox::Reset )->setText( "С новым именем" );
+                box->setText( "Файл уже существует.\n"
+                              "Можно отменить обработку, "
+                              "перезаписать файл или "
+                              "сформировать файл с новым именем." );
+            } else {
+                box->setText( "Файл уже существует.\n"
+                              "Можно отменить обработку или "
+                              "перезаписать файл." );
+            }
+            box->setDefaultButton( QMessageBox::Cancel ); // по умолчанию - отмена
+
+            int dialogResult = box->exec();
+            switch( dialogResult ) {
+             // файл будет перезаписан
+                case QMessageBox::Ok :
+                        flag = false;
+                        break;
+             // новое имя
+                case QMessageBox::Reset :
+                        fileName = getTmpName();
+                        ui->fileNameLED->setText( fileName );
+
+                        result = pathName + QDir::separator() + fileName;
+                        result = QDir::fromNativeSeparators(result);
+                        fi.setFile( result );
+                        // флаг не сбрасываем, чтобы еще раз проверить наличие файла
+                        break;
+             // любой другой исход - отмена
+                default :
+                        result.clear();
+                        flag = false;
+            }
+            delete box;
         } else {
-            box->setText( "Файл уже существует.\n"
-                          "Можно отменить обработку или "
-                          "перезаписать файл." );
+            QMessageBox::warning( this,
+                                  "Невозможно создать файл",
+                                  QString( "Невозможно создать файл \"%1\", "
+                                           "т.к. такой объект уже существует." ).
+                                            arg(QDir::toNativeSeparators(result)) );
+            result.clear();
+            flag = false;
         }
-        box->setDefaultButton( QMessageBox::Cancel ); // по умолчанию - отмена
-
-        int dialogResult = box->exec();
-        switch( dialogResult ) {
-         // файл будет перезаписан
-            case QMessageBox::Ok :
-                    flag = false;
-                    break;
-         // новое имя
-            case QMessageBox::Reset :
-                    fileName = getTmpName();
-                    ui->fileNameLED->setText( fileName );
-
-                    result = pathName + QDir::separator() + fileName;
-                    result = QDir::fromNativeSeparators(result);
-                    // флаг не сбрасываем, чтобы еще раз проверить наличие файла
-                    break;
-         // любой другой исход - отмена
-            default :
-                    result.clear();
-                    flag = false;
-        }
-        delete box;
     }
     return result;
 }
@@ -255,7 +266,7 @@ void Widget::on_startPBN_clicked()
                 // запускаем генерацию
                 emit generateFile( file,                                                 // файл
                                    fileSizeMb,                                           // размер
-                                   ui->speedCBX->isChecked() ? 1<<31 : writeSpeedMb_s ); // скорость, Мб/с
+                                   ui->speedCBX->isChecked() ? 0x7FFF : writeSpeedMb_s ); // скорость, Мб/с
             }
         }
         catch(...) {

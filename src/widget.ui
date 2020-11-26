@@ -46,7 +46,7 @@
       <bool>false</bool>
      </property>
      <property name="text">
-      <string>Скорость записи, Мб/c</string>
+      <string>Скорость записи не выше, Мб/c</string>
      </property>
     </widget>
    </item>

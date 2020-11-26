@@ -26,19 +26,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         widget.cpp \
-    appGlobal.cpp \
-    fileGenerator.cpp \
-    progressandspeeddialog.cpp
+        fileGenerator.cpp \
+        progressandspeeddialog.cpp
 
 HEADERS += \
         widget.h \
-    appGlobal.h \
-    fileGenerator.h \
-    progressandspeeddialog.h
+        fileGenerator.h \
+        progressandspeeddialog.h
 
 FORMS += \
         widget.ui \
-    progressandspeeddialog.ui
+        progressandspeeddialog.ui
 
 include( ../../LIBS/ipp.pri )
 
