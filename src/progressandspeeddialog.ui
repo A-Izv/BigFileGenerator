@@ -2,11 +2,25 @@
 <ui version="4.0">
  <class>ProgressAndSpeedDialog</class>
  <widget class="QDialog" name="ProgressAndSpeedDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>65</height>
+   </rect>
+  </property>
   <property name="sizePolicy">
    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>300</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="modal">
    <bool>true</bool>

@@ -38,7 +38,7 @@ FORMS += \
         widget.ui \
         progressandspeeddialog.ui
 
-include( ../../LIBS/ipp.pri )
+include( ../../Intel_LIBS/ipp.pri )
 
 RC_ICONS = ../img/robot.ico
 
