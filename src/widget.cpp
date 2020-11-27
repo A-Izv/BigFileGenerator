@@ -9,6 +9,9 @@
 #include <QMessageBox>
 #include <QFileDialog>
 //------------------------------------------------------------------------------
+#include <windows.h>
+#include <fcntl.h>
+//------------------------------------------------------------------------------
 #include "progressandspeeddialog.h"
 //------------------------------------------------------------------------------
 Widget::Widget(QWidget *parent) :
@@ -230,11 +233,33 @@ void Widget::on_startPBN_clicked()
 
  // создаем объект для доступа к файлу
     if( !fullName.isEmpty() ) {
-        file = new QFile( fullName );
+        file = new QFile; // создаем объект для доступа к файлу
+
+     // Qt открывает файлы с доступом на чтение/запись для других процессов.
+     // В Windows (если этого не нужно) чаще всего запрещают такой доступ.
+     // Для имитации такого подхода открывать файл будем с помощью WinAPI,
+     // а потом полученный дескриптор использовать в QFile.
+        wchar_t wName[1000] = {0};  // строка многобайтных символов для WinAPI
+        HANDLE  fileH = 0;          // дескриптор файла WinAPI
+
+        fullName.toWCharArray( wName ); // формируем имя файла в буфере
+
+        // открываем файл
+        fileH = CreateFile( wName,                   // pointer to name of the file
+                            GENERIC_WRITE,           // access (read-write) mode
+                            0,                       // share mode ( 0 - no share )
+                            NULL,                    // pointer to security attributes
+                            CREATE_ALWAYS,           // how to create
+                            FILE_ATTRIBUTE_NORMAL,   // file attributes
+                            NULL                     // handle to file with attributes to copy
+                            );
+        // преобразуем дескриптор из нативного (WinAPI) в дескриптор Си
+        // (он нужен для стандартных, а не API-шные, функций работы с файлами)
+        auto fd = _open_osfhandle((intptr_t)fileH, 0 );
 
         try {
-         // открываем файл
-            if( !file->open(QIODevice::WriteOnly) ) {
+         // открываем файл на основе созданного дескриптора (со всеми его разрешениями)
+            if( !file->open( fd, QIODevice::WriteOnly, QFileDevice::AutoCloseHandle ) ) {
                 throw("error: file not opened");    // не удалось открыть файл
             } else {
              // файл успешно открыт
@@ -283,11 +308,7 @@ void Widget::on_startPBN_clicked()
 //------------------------------------------------------------------------------
 void Widget::generationFinished(FileGenerator::FinishReason r)
 {
-    if( r != FileGenerator::FileReady ) {
-     // не получилось создать файл....
-        file->close();  // закрываем файл
-        file->remove(); // удаляем недоделанный файл
-    } else {
+    if( r == FileGenerator::FileReady ) {
      // файл был успешно создан
         if( ui->fileNameCBX->isChecked() ) {
          // формируем новое случайное имя файла
@@ -295,7 +316,13 @@ void Widget::generationFinished(FileGenerator::FinishReason r)
             ui->fileNameLED->setText( fileName );   // перенос в пользовательский интерфейс
         }
     }
+
     delete file; file = nullptr;
+
+    if( r != FileGenerator::FileReady ) {
+     // так как целиком создать файл не получилось - удаляем
+        QFile::remove( pathName + QDir::separator() + fileName );
+    }
 }
 //------------------------------------------------------------------------------
 
