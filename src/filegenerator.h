@@ -22,17 +22,21 @@ signals:
     void                    currentProgress( int p );
 
 public slots:
-    void                    generateFile(QFile *file, int sizeMb, short speedMb );
+    void                    generateFile(QFile *file,
+                                         int sizeMb,
+                                         short speedMb,
+                                         int sinNum );
 
 private:
-    static const int        MAX_SIZE_SMPL;
+    static const int        MAX_SIZE_SMPL = 64*1024*1024/sizeof(Ipp32fc);
 
 private:
-    Ipp32f                  *buffer;        // буфер для формирования ПСП
+    Ipp32fc                 *sinBuf;        // буфер для формирования гармоник
+    Ipp32fc                 *buffer;        // буфер для формирования ПСП
     IppsRandGaussState_32f  *randGaussState;// состояние гаусовского генератора случайных чисел
     qint64                  cpuFreq;        // частота процессора, МГц
     bool                    abortFlag;      // флаг (принудительного) завершения генерации
 
-};
+ };
 //------------------------------------------------------------------------------
 #endif // FILEGENERATOR_H

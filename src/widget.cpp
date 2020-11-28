@@ -27,6 +27,12 @@ Widget::Widget(QWidget *parent) :
     // фиксируем размер окна по вертикали
     this->setMaximumHeight( this->layout()->minimumSize().height() );
 
+    ui->realizeBGR->setId( ui->noiseRBN,       Noise );
+    ui->realizeBGR->setId( ui->noiseAndSinRBN, NoiseAndSin );
+
+    QObject::connect( ui->realizeBGR,
+                      QOverload<int>::of(&QButtonGroup::buttonPressed),
+                      [this](int id) { realizeType = (RealizeType)id; } );
  // инициализация генератора случайных чисел
     qsrand( QTime::currentTime().msecsSinceStartOfDay() );
 
@@ -68,6 +74,12 @@ Widget::Widget(QWidget *parent) :
     ui->speedCBX->setChecked( settings.value("maxSpeed",true).toBool() );
     writeSpeedMb_s = settings.value( "writeSpeedMb_s", 2 ).toInt();
     ui->speedHSL->setValue( writeSpeedMb_s );
+    // тип реализации
+    realizeType = (RealizeType)settings.value( "realizeType", Noise ).toInt();
+    ui->realizeBGR->button( realizeType )->setChecked(true);
+    // число гармоник в реализации
+    sinNumber = settings.value( "sinNumber", 1 ).toInt();
+    ui->sinHSL->setValue( sinNumber );
 }
 //------------------------------------------------------------------------------
 Widget::~Widget()
@@ -80,6 +92,8 @@ Widget::~Widget()
     settings.setValue( "fileSizeMb",        fileSizeMb );
     settings.setValue( "maxSpeed",          ui->speedCBX->isChecked() );
     settings.setValue( "writeSpeedMb_s",    writeSpeedMb_s );
+    settings.setValue( "realizeType",       realizeType );
+    settings.setValue( "sinNumber",         sinNumber );
 
  // удаляем объекты
     thread->quit(); // просим поток завершиться
@@ -291,7 +305,8 @@ void Widget::on_startPBN_clicked()
                 // запускаем генерацию
                 emit generateFile( file,                                                 // файл
                                    fileSizeMb,                                           // размер
-                                   ui->speedCBX->isChecked() ? 0x7FFF : writeSpeedMb_s ); // скорость, Мб/с
+                                   ui->speedCBX->isChecked() ? 0x7FFF : writeSpeedMb_s,  // скорость, Мб/с
+                                   realizeType == NoiseAndSin ? sinNumber : 0 );         // число гармоник
             }
         }
         catch(...) {
@@ -325,4 +340,8 @@ void Widget::generationFinished(FileGenerator::FinishReason r)
     }
 }
 //------------------------------------------------------------------------------
-
+void Widget::on_sinHSL_valueChanged(int value)
+{
+    sinNumber = value;
+}
+//------------------------------------------------------------------------------

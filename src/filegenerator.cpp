@@ -5,10 +5,14 @@
 #include <cmath>
 #include <QThread>
 //------------------------------------------------------------------------------
-const int FileGenerator::MAX_SIZE_SMPL = 64*1024*1024/sizeof(float);
+// включаем генерацию исключения как реакцию на ошибку IPP
+#ifndef IPP_CHK_ERR_REACTION
+    #define IPP_CHK_ERR_REACTION
+#endif
 //------------------------------------------------------------------------------
 FileGenerator::FileGenerator(QObject *parent) :
     QObject( parent ),
+    sinBuf( nullptr ),
     buffer( nullptr ),
     randGaussState( nullptr ),
     abortFlag(false)
@@ -19,7 +23,8 @@ FileGenerator::FileGenerator(QObject *parent) :
     qRegisterMetaType<FinishReason>( "FinishReason" );
 
  // выделение памяти
-    buffer = ippsMalloc_32f( MAX_SIZE_SMPL );
+    buffer = ippsMalloc_32fc( MAX_SIZE_SMPL );
+    sinBuf = ippsMalloc_32fc( MAX_SIZE_SMPL );
 
  // подготовка генератора случайных чисел
     unsigned    seed = unsigned(   qrand() | (qrand() << 16)   );
@@ -39,6 +44,7 @@ FileGenerator::FileGenerator(QObject *parent) :
 FileGenerator::~FileGenerator()
 {
     ippsFree( buffer );
+    ippsFree( sinBuf );
     ippsFree( randGaussState );
 }
 //------------------------------------------------------------------------------
@@ -47,7 +53,7 @@ void FileGenerator::abortGeneration()
     abortFlag = true;
 }
 //------------------------------------------------------------------------------
-void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb )
+void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb, int sinNum )
 {
     FinishReason result = Error;
 
@@ -55,12 +61,13 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb )
     if( file && file->isOpen() ) {
         try {
             qint64  bytesToWrite   = 1024LL*1024*sizeMb; // если не будет константы LL то результат будет int
-            qint64  samplesToWrite = bytesToWrite / sizeof(Ipp32f);
+            qint64  samplesToWrite = bytesToWrite / sizeof(Ipp32fc);
             qint64  tmp64;
             qint64  curTime, bgnTime, oldTime;
             qint64  bytesWritten = 0;
             qint64  speedBytePerMTact = (1024LL*1024*speedMb)/cpuFreq; // LL нужна!
             qint64  portionSizeSmpl;
+            float   phase = 0;
 
          // настраиваем файл
             file->resize( 0 );  // изменяем размер файла
@@ -78,7 +85,7 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb )
                 tmp64  /= 1000*1000;                        // сколько милионов тактов прошло
                 portionSizeSmpl  = tmp64*speedBytePerMTact; // число байт, которое должно быть записано
                 portionSizeSmpl -= bytesWritten;            // вычитаем записанные байты - получаем сколько еще нужно записать
-                portionSizeSmpl /= sizeof(Ipp32f);          // переводим в число отсчетов
+                portionSizeSmpl /= sizeof(Ipp32fc);         // переводим в число отсчетов
                 // корректируем значение
                 portionSizeSmpl = qMin<qint64>( portionSizeSmpl, MAX_SIZE_SMPL  ); // не больше максимального размера
                 portionSizeSmpl = qMin(         portionSizeSmpl, samplesToWrite ); // не больше требуемого числа байт
@@ -94,11 +101,18 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb )
                     oldTime = curTime; // запоминаем время последней записи
 
                     // формируем ПСП
-                    CHK( ippsRandGauss_32f( buffer, portionSizeSmpl, randGaussState ) );
-                    // записываем ПСП в файл
-                    tmp64 = file->write( (char*)buffer, portionSizeSmpl*sizeof(Ipp32f) );
+                    CHK( ippsRandGauss_32f( (Ipp32f*)buffer, 2*portionSizeSmpl, randGaussState ) );
+                    // добавляем гармоник
+                    for( int i = 0 ; i < sinNum ; ++i ) {
+                        CHK( ippsTone_32fc( sinBuf, portionSizeSmpl,                // формируем гармонику
+                                            100, i*(1./sinNum), &phase,
+                                            ippAlgHintFast ) );
+                        CHK( ippsAdd_32fc_I( sinBuf, buffer, portionSizeSmpl ) );   // добавляем в реализацию
+                    };
+                    // записываем реализацию в файл
+                    tmp64 = file->write( (char*)buffer, portionSizeSmpl*sizeof(Ipp32fc) );
                     bytesWritten   += tmp64;
-                    samplesToWrite -= tmp64 / sizeof(Ipp32f); // !уменьшаем объем, который надо записать
+                    samplesToWrite -= tmp64 / sizeof(Ipp32fc); // !уменьшаем объем, который надо записать
 
                     // отправляем сигнал с информацией о прогрессе
                     emit currentProgress( 100*bytesWritten/bytesToWrite );
