@@ -273,7 +273,7 @@ void Widget::on_startPBN_clicked()
 
         try {
          // открываем файл на основе созданного дескриптора (со всеми его разрешениями)
-            if( !file->open( fd, QIODevice::WriteOnly, QFileDevice::AutoCloseHandle ) ) {
+            if( fd == -1 || !file->open( fd, QIODevice::WriteOnly, QFileDevice::AutoCloseHandle ) ) {
                 throw("error: file not opened");    // не удалось открыть файл
             } else {
              // файл успешно открыт

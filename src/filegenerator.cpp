@@ -1,14 +1,8 @@
 #include "filegenerator.h"
 //------------------------------------------------------------------------------
 #include <QFile>
-#include "ippCustom.h"
 #include <cmath>
 #include <QThread>
-//------------------------------------------------------------------------------
-// включаем генерацию исключения как реакцию на ошибку IPP
-#ifndef IPP_CHK_ERR_REACTION
-    #define IPP_CHK_ERR_REACTION
-#endif
 //------------------------------------------------------------------------------
 FileGenerator::FileGenerator(QObject *parent) :
     QObject( parent ),
