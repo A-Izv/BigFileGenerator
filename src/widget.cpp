@@ -325,6 +325,8 @@ void Widget::on_startPBN_clicked()
 //------------------------------------------------------------------------------
 void Widget::generationFinished(FileGenerator::FinishReason r)
 {
+    QString fullName = pathName + QDir::separator() + fileName;
+
     if( r == FileGenerator::FileReady ) {
      // файл был успешно создан
         if( ui->fileNameCBX->isChecked() ) {
@@ -338,7 +340,15 @@ void Widget::generationFinished(FileGenerator::FinishReason r)
 
     if( r != FileGenerator::FileReady ) {
      // так как целиком создать файл не получилось - удаляем
-        QFile::remove( pathName + QDir::separator() + fileName );
+        QFile::remove( fullName );
+    }
+    if( r == FileGenerator::Error ) {
+        QMessageBox::critical( this,
+                               "Ошибка генерации",
+                               QString( "При формировании файла \"%1\""
+                                        "возникла ошибка." )
+                                .arg( QDir::toNativeSeparators(fullName) )
+                             );
     }
 }
 //------------------------------------------------------------------------------
