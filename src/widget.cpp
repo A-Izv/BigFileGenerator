@@ -33,6 +33,8 @@ Widget::Widget(QWidget *parent) :
     QObject::connect( ui->realizeBGR,
                       QOverload<int>::of(&QButtonGroup::buttonPressed),
                       [this](int id) { realizeType = (RealizeType)id; } );
+
+    this->setWindowTitle( QString("Файлоформирователь (%1)").arg(VERSION) );
  // инициализация генератора случайных чисел
     qsrand( QTime::currentTime().msecsSinceStartOfDay() );
 

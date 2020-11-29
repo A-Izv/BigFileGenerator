@@ -54,14 +54,14 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb, int sin
     abortFlag = false; // сбрасываем флаг прекращения
     if( file && file->isOpen() ) {
         try {
-            qint64  bytesToWrite   = 1024LL*1024*sizeMb; // если не будет константы LL то результат будет int
-            qint64  samplesToWrite = bytesToWrite / sizeof(Ipp32fc);
-            qint64  tmp64;
-            qint64  curTime, bgnTime, oldTime;
-            qint64  bytesWritten = 0;
-            qint64  speedBytePerMTact = (1024LL*1024*speedMb)/cpuFreq; // LL нужна!
-            qint64  portionSizeSmpl;
-            float   phase = 0;
+            QVector<float>  phases( sinNum, 0 );
+            qint64          bytesToWrite   = 1024LL*1024*sizeMb; // если не будет константы LL то результат будет int
+            qint64          samplesToWrite = bytesToWrite / sizeof(Ipp32fc);
+            qint64          tmp64;
+            qint64          curTime, bgnTime, oldTime;
+            qint64          bytesWritten = 0;
+            qint64          speedBytePerMTact = (1024LL*1024*speedMb)/cpuFreq; // LL нужна!
+            qint64          portionSizeSmpl;
 
          // настраиваем файл
             file->resize( 0 );  // изменяем размер файла
@@ -99,7 +99,7 @@ void FileGenerator::generateFile(QFile *file, int sizeMb, short speedMb, int sin
                     // добавляем гармоник
                     for( int i = 0 ; i < sinNum ; ++i ) {
                         CHK( ippsTone_32fc( sinBuf, portionSizeSmpl,                // формируем гармонику
-                                            100, i*(1./sinNum), &phase,
+                                            100, i*(1./sinNum), phases.data() + i,
                                             ippAlgHintFast ) );
                         CHK( ippsAdd_32fc_I( sinBuf, buffer, portionSizeSmpl ) );   // добавляем в реализацию
                     };

@@ -22,9 +22,6 @@
     <height>0</height>
    </size>
   </property>
-  <property name="windowTitle">
-   <string>Файлоформирователь</string>
-  </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
     <normaloff>:/img/icons8-robot-2-64.png</normaloff>:/img/icons8-robot-2-64.png</iconset>
